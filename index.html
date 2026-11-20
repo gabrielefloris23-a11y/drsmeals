@@ -1,3 +1,321 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prenotazione Pasti Ospiti</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2d3748;
+            --primary-hover: #1a202c;
+            --accent-sage: #5a7365;
+            --accent-sage-light: #f0f4f1;
+            --accent-warm: #7c2d12;
+            --danger: #991b1b;
+            --danger-bg: #fef2f2;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgb(0 0 0 / 0.03);
+            --bg: #fcfbf9;
+            --card-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 600px; 
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .form-header { 
+            padding: 1.25rem 1.5rem 1.1rem 1.5rem; 
+            color: var(--primary); 
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-header h2 { 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            color: var(--accent-sage); 
+            letter-spacing: 0.02em; 
+        }
+        
+        .info-card {
+            background: #ffffff;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+        #data-testo { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+        #santi-testo { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+
+        .santi-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .santi-link:hover {
+            color: var(--accent-sage);
+            text-decoration: underline;
+        }
+
+        .orari-notice {
+            background: #fff8f0;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .section { padding: 1.5rem; }
+        
+        .main-form-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        label { font-weight: 600; color: var(--primary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        
+        textarea, select { 
+            padding: 0.65rem 0.75rem; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-size: 0.875rem; 
+            font-family: inherit; 
+            color: var(--text-main);
+            background: var(--card-bg);
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-sage);
+            box-shadow: 0 0 0 3px rgba(90, 115, 101, 0.12);
+        }
+
+        .ospite-box {
+            background: #f0f7f4;
+            border: 1px solid #c8e1d5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #2d503f;
+            display: none;
+            line-height: 1.45;
+        }
+
+        .ospite-sub {
+            display: block;
+            font-size: 0.8rem;
+            color: #466b59;
+            margin-top: 2px;
+        }
+
+        .error-box {
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            color: var(--danger);
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            text-align: center;
+            display: none;
+        }
+
+        .meal-block {
+            background: #f3f4f2; 
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .meal-block.disabled-meal {
+            opacity: 0.55;
+            pointer-events: none;
+            background: #e5e7eb;
+        }
+
+        .meal-header {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--accent-sage);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .expired-badge {
+            font-size: 0.75rem;
+            color: var(--danger);
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: none;
+        }
+
+        .portata-group {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dish-option {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .dish-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            accent-color: var(--accent-sage);
+            cursor: pointer;
+        }
+
+        .dish-link {
+            color: var(--text-main);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dish-link:hover {
+            color: var(--accent-sage);
+            text-decoration: underline;
+        }
+        .search-icon {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .submit-btn { 
+            width: 100%; 
+            padding: 0.85rem; 
+            border: none; 
+            border-radius: 8px; 
+            background: var(--primary);
+            color: white; 
+            font-size: 0.95rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            margin-top: 0.5rem; 
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover { background: var(--primary-hover); }
+
+        #overlay { 
+            position: fixed; inset: 0; background: rgba(45, 55, 72, 0.65); 
+            backdrop-filter: blur(4px); display: none; justify-content: center; 
+            align-items: center; flex-direction: column; color: white; z-index: 999; 
+            text-align: center; padding: 1rem;
+        }
+        
+        .spinner { 
+            width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.2); 
+            border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="form-header">
+            <h2>Residenti DRS</h2>
+        </div>
+        
+        <div class="info-card">
+            <div id="data-testo">Caricamento data...</div>
+            <div id="santi-testo">Recupero santo del giorno...</div>
+            <div class="orari-notice">
+                ⏰ Orari: <b>Pranzo entro le 10:00</b> | <b>Cena entro le 16:00</b>
+            </div>
+        </div>
+
+        <form id="formPasti" class="section" onsubmit="inviaPrenotazione(event)">
+            <div class="main-form-grid">
+                <!-- Messaggio in caso di link mancante o non valido -->
+                <div id="link-error-box" class="error-box"></div>
+
+                <!-- Box di benvenuto residente -->
+                <div id="ospite-info-box" class="ospite-box">
+                    Benvenuto <b id="lbl-nome"></b> — Camera <b id="lbl-camera"></b>
+                    <span id="lbl-email-riga" class="ospite-sub" style="display:none;">Email: <span id="lbl-email"></span></span>
+                </div>
+
+                <!-- Sezioni Menù (Caricate dinamicamente) -->
+                <div id="menu-pasti-options" style="display:none;">
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.875rem; margin: 20px 0;">Caricamento opzioni menù...</p>
+                </div>
+
+                <button type="submit" id="btn-invia" class="submit-btn" style="display:none;">Conferma e Invia Prenotazione</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="overlay">
+        <div id="overlaySpinner" class="spinner"></div>
+        <p id="overlayMsg">Verifica accesso in corso...</p>
+    </div>
+
 <script>
   // Test immediato per vedere se lo script parte
   console.log("Lo script è partito!");
@@ -21,3 +339,5 @@
     });
   }
 </script>
+</body>
+</html>
