@@ -325,7 +325,7 @@
   const nomeUtente = parametriUrl.get('utente');
 
   if (nomeUtente) {
-    const urlGoogleScript = "INCOLLA_QUI_IL_URL_DELL_APP_WEB";
+    const urlGoogleScript = "https://script.google.com/macros/s/AKfycbx7LvVwjzdMOjSNHFM5YNwXmOD7CcoUvvtGlDWGO5ryukf9O8xdlXES_KZCtGp_NASF/exec";
     
     fetch(`${urlGoogleScript}?utente=${encodeURIComponent(nomeUtente)}`, {
       method: "GET",
