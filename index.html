@@ -317,27 +317,367 @@
     </div>
 
 <script>
-  // Test immediato per vedere se lo script parte
-  console.log("Lo script è partito!");
-  alert("Pagina caricata correttamente!");
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbx7LvVwjzdMOjSNHFM5YNwXmOD7CcoUvvtGlDWGO5ryukf9O8xdlXES_KZCtGp_NASF/exec"; 
 
-  const parametriUrl = new URLSearchParams(window.location.search);
-  const nomeUtente = parametriUrl.get('utente');
+    const URL_TSV_SANTI = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=495844205&single=true&output=tsv";
+    const URL_TSV_PRANZO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=474237674&single=true&output=tsv";
+    const URL_TSV_CENA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=1562493934&single=true&output=tsv";
 
-  if (nomeUtente) {
-    const urlGoogleScript = "https://script.google.com/macros/s/AKfycbx7LvVwjzdMOjSNHFM5YNwXmOD7CcoUvvtGlDWGO5ryukf9O8xdlXES_KZCtGp_NASF/exec";
+    let codiceAccesso = "";
+    let datiOspiteCorrente = null;
+
+    function escapeHtml(unsafe) {
+        return String(unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function leggiCodiceDaUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return (params.get("codice") || "").trim();
+    }
+
+    function mostraErroreAccesso(messaggio) {
+        datiOspiteCorrente = null;
+        document.getElementById('ospite-info-box').style.display = 'none';
+        document.getElementById('menu-pasti-options').style.display = 'none';
+        document.getElementById('btn-invia').style.display = 'none';
+
+        const errBox = document.getElementById('link-error-box');
+        errBox.innerHTML = messaggio;
+        errBox.style.display = 'block';
+    }
+
+    async function fetchConRetry(url, tentativi = 3) {
+        for (let i = 0; i < tentativi; i++) {
+            try {
+                const cleanUrl = url.split('&cache=')[0] + '&t=' + new Date().getTime();
+                const res = await fetch(cleanUrl, { cache: 'no-store' });
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text && text.trim().length > 0) return text;
+                }
+            } catch (e) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
+        throw new Error("Impossibile recuperare i dati");
+    }
+
+    async function caricaDataESanti() {
+        const oggi = new Date();
+        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        document.getElementById('data-testo').innerText = oggi.toLocaleDateString('it-IT', options);
+
+        try {
+            const textS = await fetchConRetry(URL_TSV_SANTI);
+            const primaRiga = textS.split('\n')[0];
+            let santi = "Santo del giorno non disponibile.";
+            if (primaRiga && primaRiga.trim().length > 0) {
+                santi = primaRiga.trim().split(/[\t\r\n]+/).map(s => s.trim()).filter(Boolean).join(', ');
+            }
+            
+            if (santi && santi !== "Santo del giorno non disponibile.") {
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent('Santo del giorno ' + santi)}`;
+                document.getElementById('santi-testo').innerHTML = `
+                    <a href="${googleSearchUrl}" target="_blank" class="santi-link" title="Cerca su Google">
+                        <span>${escapeHtml(santi)}</span>
+                        <span class="search-icon">🔍</span>
+                    </a>
+                `;
+            } else {
+                document.getElementById('santi-testo').innerText = santi;
+            }
+        } catch (e) { 
+            document.getElementById('santi-testo').innerText = ""; 
+        }
+    }
+
+    async function verificaCodiceAccesso() {
+        codiceAccesso = leggiCodiceDaUrl();
+
+        if (!codiceAccesso) {
+            mostraErroreAccesso("<b>Link di accesso mancante.</b><br>Apri la pagina utilizzando il link personale ricevuto per la tua camera.");
+            return;
+        }
+
+        const ov = document.getElementById('overlay');
+        const spinner = document.getElementById('overlaySpinner');
+        spinner.style.display = 'block';
+        document.getElementById('overlayMsg').innerText = "Verifica link personale in corso...";
+        ov.style.display = 'flex';
+
+        try {
+            const response = await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ azione: "verifica_codice", codice: codiceAccesso })
+            });
+
+            const risposta = await response.json();
+            ov.style.display = 'none';
+
+            if (risposta.errore) {
+                mostraErroreAccesso("<b>Errore di configurazione:</b> " + escapeHtml(risposta.errore));
+                return;
+            }
+
+            if (risposta.trovato) {
+                datiOspiteCorrente = risposta;
+                document.getElementById('link-error-box').style.display = 'none';
+
+                const nomeCompleto = [risposta.titolo, risposta.nome, risposta.cognome]
+                    .map(s => String(s || "").trim())
+                    .filter(Boolean)
+                    .join(" ");
+
+                document.getElementById('lbl-nome').innerText = nomeCompleto || "Residente";
+                document.getElementById('lbl-camera').innerText = risposta.camera || "-";
+
+                if (risposta.email) {
+                    document.getElementById('lbl-email').innerText = risposta.email;
+                    document.getElementById('lbl-email-riga').style.display = 'block';
+                } else {
+                    document.getElementById('lbl-email-riga').style.display = 'none';
+                }
+
+                document.getElementById('ospite-info-box').style.display = 'block';
+                document.getElementById('menu-pasti-options').style.display = 'block';
+                document.getElementById('btn-invia').style.display = 'block';
+            } else {
+                mostraErroreAccesso("<b>Link non valido o revocato.</b><br>Contatta la reception per ricevere un nuovo link personale.");
+            }
+        } catch (err) {
+            console.error(err);
+            ov.style.display = 'none';
+            mostraErroreAccesso("Errore di connessione durante la verifica del link. Riprova tra qualche istante.");
+        }
+    }
+
+    async function caricaMenu() {
+        try {
+            const [textPranzo, textCena] = await Promise.all([
+                fetchConRetry(URL_TSV_PRANZO),
+                fetchConRetry(URL_TSV_CENA)
+            ]);
+
+            const rowsPranzo = textPranzo.split('\n').map(row => row.split('\t'));
+            const rowsCena = textCena.split('\n').map(row => row.split('\t'));
+
+            generaMenuOspiti(rowsPranzo, rowsCena);
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('menu-pasti-options').innerHTML = "<p style='color:var(--danger); text-align:center;'>Impossibile caricare il menù del giorno.</p>";
+        }
+    }
+
+    function estraiColonna(rows, colIndex) {
+        let elementi = [];
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i] && rows[i][colIndex]) {
+                let valore = rows[i][colIndex].trim();
+                if (valore !== '') {
+                    elementi.push(valore);
+                }
+            }
+        }
+        return elementi;
+    }
+
+    function generaMenuOspiti(rowsPranzo, rowsCena) {
+        const oraAttuale = new Date().getHours();
+
+        const pranzoScaduto = oraAttuale >= 10;
+        const cenaScaduta = oraAttuale >= 16;
+
+        let html = '';
+
+        html += `
+        <div class="meal-block ${pranzoScaduto ? 'disabled-meal' : ''}" data-meal="pranzo">
+            <div class="meal-header">
+                <span>Pranzo</span>
+                ${pranzoScaduto ? '<span class="expired-badge">Prenotazioni chiuse (dopo le 10:00)</span>' : ''}
+            </div>
+            ${costruisciSezioneServizio(rowsPranzo, 'pranzo', pranzoScaduto)}
+            <div class="field" style="margin-top: 1rem;">
+                <label for="note-pranzo">NOTE PRANZO</label>
+                <textarea id="note-pranzo" rows="2" placeholder="Note.." ${pranzoScaduto ? 'disabled' : ''}></textarea>
+            </div>
+        </div>`;
+
+        html += `
+        <div class="meal-block ${cenaScaduta ? 'disabled-meal' : ''}" data-meal="cena">
+            <div class="meal-header">
+                <span>Cena</span>
+                ${cenaScaduta ? '<span class="expired-badge">Prenotazioni chiuse (dopo le 16:00)</span>' : ''}
+            </div>
+            ${costruisciSezioneServizio(rowsCena, 'cena', cenaScaduta)}
+            <div class="field" style="margin-top: 1rem;">
+                <label for="note-cena">NOTE CENA</label>
+                <textarea id="note-cena" rows="2" placeholder="Note.." ${cenaScaduta ? 'disabled' : ''}></textarea>
+            </div>
+        </div>`;
+
+        document.getElementById('menu-pasti-options').innerHTML = html;
+    }
+
+    function costruisciSezioneServizio(rows, servizio, disabilitato) {
+        if (!rows || rows.length <= 1) {
+            return '<p style="font-size:0.8rem; color: var(--text-muted);">Menù non disponibile.</p>';
+        }
+
+        const portateInfo = [
+            { nome: "Primo Piatto", colAlt: 1, rowIndex: 1 },
+            { nome: "Secondo Piatto", colAlt: 2, rowIndex: 2 },
+            { nome: "Contorno", colAlt: 3, rowIndex: 3 }
+        ];
+
+        let out = '';
+
+        portateInfo.forEach(p => {
+            let piattoGiorno = (rows[p.rowIndex] && rows[p.rowIndex][0]) ? rows[p.rowIndex][0].trim() : "";
+            let alternative = estraiColonna(rows, p.colAlt);
+
+            out += `<div class="portata-group">`;
+
+            if (piattoGiorno) {
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(piattoGiorno)}`;
+                out += `
+                <label class="dish-option">
+                    <input type="checkbox" class="cb-giorno-${servizio}" data-portata="${p.nome}" value="${escapeHtml(piattoGiorno)}" onchange="gestisciSelezione('${servizio}', '${p.nome}', event)" ${disabilitato ? 'disabled' : ''}>
+                    <a href="${googleSearchUrl}" target="_blank" class="dish-link" title="Cerca su Google">
+                        <span>${escapeHtml(piattoGiorno)}</span>
+                        <span class="search-icon">🔍</span>
+                    </a>
+                </label>`;
+            }
+
+            if (alternative.length > 0) {
+                out += `<select class="select-alt-${servizio}" data-portata="${p.nome}" onchange="gestisciSelezione('${servizio}', '${p.nome}', event)" ${disabilitato ? 'disabled' : ''}>
+                    <option value="">-- Seleziona alternativa --</option>`;
+                alternative.forEach(opt => {
+                    out += `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`;
+                });
+                out += `</select>`;
+            }
+
+            out += `</div>`;
+        });
+
+        return out;
+    }
+
+    function gestisciSelezione(servizio, portata, ev) {
+        const container = document.querySelector(`.meal-block[data-meal="${servizio}"]`);
+        if (!container) return;
+
+        const cb = container.querySelector(`input.cb-giorno-${servizio}[data-portata="${portata}"]`);
+        const sel = container.querySelector(`select.select-alt-${servizio}[data-portata="${portata}"]`);
+        const target = ev ? ev.target : null;
+
+        if (target && target.type === 'checkbox' && cb && cb.checked) {
+            if (sel) sel.value = "";
+        } else if (target && target.tagName === 'SELECT' && sel && sel.value !== "") {
+            if (cb) cb.checked = false;
+        }
+    }
+
+    function raccogliScelteServizio(servizio) {
+        const container = document.querySelector(`.meal-block[data-meal="${servizio}"]`);
+        if (!container || container.classList.contains('disabled-meal')) return { primo: "-", secondo: "-", contorno: "-" };
+
+        let res = { primo: "-", secondo: "-", contorno: "-" };
+        const portate = ["Primo Piatto", "Secondo Piatto", "Contorno"];
+        const chiavi = ["primo", "secondo", "contorno"];
+
+        portate.forEach((portata, index) => {
+            const cb = container.querySelector(`input.cb-giorno-${servizio}[data-portata="${portata}"]`);
+            const sel = container.querySelector(`select.select-alt-${servizio}[data-portata="${portata}"]`);
+
+            if (cb && cb.checked) {
+                res[chiavi[index]] = cb.value;
+            } else if (sel && sel.value) {
+                res[chiavi[index]] = sel.value;
+            }
+        });
+
+        return res;
+    }
+
+    async function inviaPrenotazione(e) {
+        e.preventDefault();
+
+        if (!datiOspiteCorrente || !codiceAccesso) {
+            mostraErroreAccesso("<b>Sessione non valida.</b><br>Assicurati di aver aperto la pagina tramite il tuo link personale.");
+            return;
+        }
+
+        const notePranzo = document.getElementById('note-pranzo') ? document.getElementById('note-pranzo').value.trim() : "";
+        const noteCena = document.getElementById('note-cena') ? document.getElementById('note-cena').value.trim() : "";
+
+        const pranzoScelte = raccogliScelteServizio('pranzo');
+        const cenaScelte = raccogliScelteServizio('cena');
+
+        const haSceltoPranzo = pranzoScelte.primo !== "-" || pranzoScelte.secondo !== "-" || pranzoScelte.contorno !== "-";
+        const haSceltoCena = cenaScelte.primo !== "-" || cenaScelte.secondo !== "-" || cenaScelte.contorno !== "-";
+
+        if (!haSceltoPranzo && !haSceltoCena) {
+            alert("Seleziona almeno una portata o un'alternativa per un servizio ancora aperto!");
+            return;
+        }
+
+        const payload = {
+            azione: "invia_prenotazione",
+            codice: codiceAccesso,
+            notePranzo: notePranzo,
+            noteCena: noteCena,
+            pranzo: pranzoScelte,
+            cena: cenaScelte
+        };
+
+        const ov = document.getElementById('overlay');
+        const spinner = document.getElementById('overlaySpinner');
+        spinner.style.display = 'block';
+        document.getElementById('overlayMsg').innerText = "Invio prenotazione in corso...";
+        ov.style.display = 'flex';
+
+        try {
+            const response = await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+
+            const risultato = await response.json();
+            spinner.style.display = 'none';
+
+            if (risultato.result === "error") {
+                ov.style.display = 'none';
+                alert("Errore: " + (risultato.error || "Impossibile completare la prenotazione."));
+                return;
+            }
+
+            document.getElementById('overlayMsg').innerText = "Prenotazione Inviata con successo!";
+            setTimeout(() => { 
+                ov.style.display = 'none'; 
+                document.getElementById('formPasti').reset(); 
+                caricaMenu();
+            }, 2000);
+        } catch(err) {
+            console.error(err);
+            spinner.style.display = 'none';
+            ov.style.display = 'none';
+            alert("Errore durante l'invio della prenotazione.");
+        }
+    }
+
+// 1. Carica subito la data e il santo del giorno
+    caricaDataESanti();
     
-    fetch(`${urlGoogleScript}?utente=${encodeURIComponent(nomeUtente)}`, {
-      method: "GET",
-      mode: "no-cors"
-    })
-    .then(() => {
-      console.log("Richiesta inviata con successo per: " + nomeUtente);
-    })
-    .catch(error => {
-      console.error("Errore di invio:", error);
+    // 2. Prima verifica il codice personale: solo se l'utente è valido carica il menù
+    verificaCodiceAccesso().then(() => {
+        if (datiOspiteCorrente) {
+            caricaMenu();
+        }
     });
-  }
 </script>
 </body>
 </html>
