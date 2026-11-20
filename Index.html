@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Prenotazione Pasti Ospiti</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2d3748;
+            --primary-hover: #1a202c;
+            --accent-sage: #5a7365;
+            --accent-sage-light: #f0f4f1;
+            --accent-warm: #7c2d12;
+            --danger: #991b1b;
+            --danger-bg: #fef2f2;
+            --radius: 12px;
+            --shadow: 0 4px 12px rgb(0 0 0 / 0.03);
+            --bg: #fcfbf9;
+            --card-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container { 
+            width: 100%; 
+            max-width: 600px; 
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .form-header { 
+            padding: 1.25rem 1.5rem 1.1rem 1.5rem; 
+            color: var(--primary); 
+            background: #ffffff;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-header h2 { 
+            font-size: 1.2rem; 
+            font-weight: 700; 
+            color: var(--accent-sage); 
+            letter-spacing: 0.02em; 
+        }
+        
+        .info-card {
+            background: #ffffff;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid var(--border-color);
+            text-align: center;
+        }
+        #data-testo { font-size: 1rem; font-weight: 600; color: var(--primary); margin-bottom: 4px; }
+        #santi-testo { font-size: 0.8125rem; color: var(--text-muted); margin-bottom: 8px; font-style: italic; }
+
+        .santi-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .santi-link:hover {
+            color: var(--accent-sage);
+            text-decoration: underline;
+        }
+
+        .orari-notice {
+            background: #fff8f0;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8125rem;
+            font-weight: 500;
+            display: inline-block;
+        }
+
+        .section { padding: 1.5rem; }
+        
+        .main-form-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.25rem;
+        }
+        
+        .field { display: flex; flex-direction: column; gap: 6px; }
+        label { font-weight: 600; color: var(--primary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        
+        textarea, select { 
+            padding: 0.65rem 0.75rem; 
+            border: 1px solid var(--border-color); 
+            border-radius: 8px; 
+            font-size: 0.875rem; 
+            font-family: inherit; 
+            color: var(--text-main);
+            background: var(--card-bg);
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        textarea:focus, select:focus {
+            outline: none;
+            border-color: var(--accent-sage);
+            box-shadow: 0 0 0 3px rgba(90, 115, 101, 0.12);
+        }
+
+        .ospite-box {
+            background: #f0f7f4;
+            border: 1px solid #c8e1d5;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            color: #2d503f;
+            display: none;
+            line-height: 1.45;
+        }
+
+        .ospite-sub {
+            display: block;
+            font-size: 0.8rem;
+            color: #466b59;
+            margin-top: 2px;
+        }
+
+        .error-box {
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            color: var(--danger);
+            padding: 14px 16px;
+            border-radius: 8px;
+            font-size: 0.875rem;
+            line-height: 1.5;
+            text-align: center;
+            display: none;
+        }
+
+        .meal-block {
+            background: #f3f4f2; 
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            position: relative;
+        }
+
+        .meal-block.disabled-meal {
+            opacity: 0.55;
+            pointer-events: none;
+            background: #e5e7eb;
+        }
+
+        .meal-header {
+            font-size: 0.875rem;
+            font-weight: 700;
+            color: var(--accent-sage);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 0.75rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 1px solid #cbd5e1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .expired-badge {
+            font-size: 0.75rem;
+            color: var(--danger);
+            background: var(--danger-bg);
+            border: 1px solid #fca5a5;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            text-transform: none;
+        }
+
+        .portata-group {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .dish-option {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            cursor: pointer;
+        }
+
+        .dish-option input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+            margin-right: 8px;
+            accent-color: var(--accent-sage);
+            cursor: pointer;
+        }
+
+        .dish-link {
+            color: var(--text-main);
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .dish-link:hover {
+            color: var(--accent-sage);
+            text-decoration: underline;
+        }
+        .search-icon {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+
+        .submit-btn { 
+            width: 100%; 
+            padding: 0.85rem; 
+            border: none; 
+            border-radius: 8px; 
+            background: var(--primary);
+            color: white; 
+            font-size: 0.95rem; 
+            font-weight: 600; 
+            cursor: pointer; 
+            margin-top: 0.5rem; 
+            transition: background 0.2s;
+        }
+
+        .submit-btn:hover { background: var(--primary-hover); }
+
+        #overlay { 
+            position: fixed; inset: 0; background: rgba(45, 55, 72, 0.65); 
+            backdrop-filter: blur(4px); display: none; justify-content: center; 
+            align-items: center; flex-direction: column; color: white; z-index: 999; 
+            text-align: center; padding: 1rem;
+        }
+        
+        .spinner { 
+            width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.2); 
+            border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div class="form-header">
+            <h2>Residenti DRS</h2>
+        </div>
+        
+        <div class="info-card">
+            <div id="data-testo">Caricamento data...</div>
+            <div id="santi-testo">Recupero santo del giorno...</div>
+            <div class="orari-notice">
+                ⏰ Orari: <b>Pranzo entro le 10:00</b> | <b>Cena entro le 16:00</b>
+            </div>
+        </div>
+
+        <form id="formPasti" class="section" onsubmit="inviaPrenotazione(event)">
+            <div class="main-form-grid">
+                <!-- Messaggio in caso di link mancante o non valido -->
+                <div id="link-error-box" class="error-box"></div>
+
+                <!-- Box di benvenuto residente -->
+                <div id="ospite-info-box" class="ospite-box">
+                    Benvenuto <b id="lbl-nome"></b> — Camera <b id="lbl-camera"></b>
+                    <span id="lbl-email-riga" class="ospite-sub" style="display:none;">Email: <span id="lbl-email"></span></span>
+                </div>
+
+                <!-- Sezioni Menù (Caricate dinamicamente) -->
+                <div id="menu-pasti-options" style="display:none;">
+                    <p style="text-align: center; color: var(--text-muted); font-size: 0.875rem; margin: 20px 0;">Caricamento opzioni menù...</p>
+                </div>
+
+                <button type="submit" id="btn-invia" class="submit-btn" style="display:none;">Conferma e Invia Prenotazione</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="overlay">
+        <div id="overlaySpinner" class="spinner"></div>
+        <p id="overlayMsg">Verifica accesso in corso...</p>
+    </div>
+
+<script>
+    const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbx7LvVwjzdMOjSNHFM5YNwXmOD7CcoUvvtGlDWGO5ryukf9O8xdlXES_KZCtGp_NASF/exec"; 
+
+    const URL_TSV_SANTI = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=495844205&single=true&output=tsv";
+    const URL_TSV_PRANZO = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=474237674&single=true&output=tsv";
+    const URL_TSV_CENA = "https://docs.google.com/spreadsheets/d/e/2PACX-1vTPCgFj0nnxLOhkzqoRvbe_UJcHikoMV5kJJypVKNfuX0GKXXYtuqhb-xcY3JhGnoVDwntZ_JMJcScU/pub?gid=1562493934&single=true&output=tsv";
+
+    let codiceAccesso = "";
+    let datiOspiteCorrente = null;
+
+    function escapeHtml(unsafe) {
+        return String(unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function leggiCodiceDaUrl() {
+        const params = new URLSearchParams(window.location.search);
+        return (params.get("codice") || "").trim();
+    }
+
+    function mostraErroreAccesso(messaggio) {
+        datiOspiteCorrente = null;
+        document.getElementById('ospite-info-box').style.display = 'none';
+        document.getElementById('menu-pasti-options').style.display = 'none';
+        document.getElementById('btn-invia').style.display = 'none';
+
+        const errBox = document.getElementById('link-error-box');
+        errBox.innerHTML = messaggio;
+        errBox.style.display = 'block';
+    }
+
+    async function fetchConRetry(url, tentativi = 3) {
+        for (let i = 0; i < tentativi; i++) {
+            try {
+                const cleanUrl = url.split('&cache=')[0] + '&t=' + new Date().getTime();
+                const res = await fetch(cleanUrl, { cache: 'no-store' });
+                if (res.ok) {
+                    const text = await res.text();
+                    if (text && text.trim().length > 0) return text;
+                }
+            } catch (e) {
+                await new Promise(r => setTimeout(r, 300));
+            }
+        }
+        throw new Error("Impossibile recuperare i dati");
+    }
+
+    async function caricaDataESanti() {
+        const oggi = new Date();
+        const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+        document.getElementById('data-testo').innerText = oggi.toLocaleDateString('it-IT', options);
+
+        try {
+            const textS = await fetchConRetry(URL_TSV_SANTI);
+            const primaRiga = textS.split('\n')[0];
+            let santi = "Santo del giorno non disponibile.";
+            if (primaRiga && primaRiga.trim().length > 0) {
+                santi = primaRiga.trim().split(/[\t\r\n]+/).map(s => s.trim()).filter(Boolean).join(', ');
+            }
+            
+            if (santi && santi !== "Santo del giorno non disponibile.") {
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent('Santo del giorno ' + santi)}`;
+                document.getElementById('santi-testo').innerHTML = `
+                    <a href="${googleSearchUrl}" target="_blank" class="santi-link" title="Cerca su Google">
+                        <span>${escapeHtml(santi)}</span>
+                        <span class="search-icon">🔍</span>
+                    </a>
+                `;
+            } else {
+                document.getElementById('santi-testo').innerText = santi;
+            }
+        } catch (e) { 
+            document.getElementById('santi-testo').innerText = ""; 
+        }
+    }
+
+    async function verificaCodiceAccesso() {
+        codiceAccesso = leggiCodiceDaUrl();
+
+        if (!codiceAccesso) {
+            mostraErroreAccesso("<b>Link di accesso mancante.</b><br>Apri la pagina utilizzando il link personale ricevuto per la tua camera.");
+            return;
+        }
+
+        const ov = document.getElementById('overlay');
+        const spinner = document.getElementById('overlaySpinner');
+        spinner.style.display = 'block';
+        document.getElementById('overlayMsg').innerText = "Verifica link personale in corso...";
+        ov.style.display = 'flex';
+
+        try {
+            const response = await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify({ azione: "verifica_codice", codice: codiceAccesso })
+            });
+
+            const risposta = await response.json();
+            ov.style.display = 'none';
+
+            if (risposta.errore) {
+                mostraErroreAccesso("<b>Errore di configurazione:</b> " + escapeHtml(risposta.errore));
+                return;
+            }
+
+            if (risposta.trovato) {
+                datiOspiteCorrente = risposta;
+                document.getElementById('link-error-box').style.display = 'none';
+
+                const nomeCompleto = [risposta.titolo, risposta.nome, risposta.cognome]
+                    .map(s => String(s || "").trim())
+                    .filter(Boolean)
+                    .join(" ");
+
+                document.getElementById('lbl-nome').innerText = nomeCompleto || "Residente";
+                document.getElementById('lbl-camera').innerText = risposta.camera || "-";
+
+                if (risposta.email) {
+                    document.getElementById('lbl-email').innerText = risposta.email;
+                    document.getElementById('lbl-email-riga').style.display = 'block';
+                } else {
+                    document.getElementById('lbl-email-riga').style.display = 'none';
+                }
+
+                document.getElementById('ospite-info-box').style.display = 'block';
+                document.getElementById('menu-pasti-options').style.display = 'block';
+                document.getElementById('btn-invia').style.display = 'block';
+            } else {
+                mostraErroreAccesso("<b>Link non valido o revocato.</b><br>Contatta la reception per ricevere un nuovo link personale.");
+            }
+        } catch (err) {
+            console.error(err);
+            ov.style.display = 'none';
+            mostraErroreAccesso("Errore di connessione durante la verifica del link. Riprova tra qualche istante.");
+        }
+    }
+
+    async function caricaMenu() {
+        try {
+            const [textPranzo, textCena] = await Promise.all([
+                fetchConRetry(URL_TSV_PRANZO),
+                fetchConRetry(URL_TSV_CENA)
+            ]);
+
+            const rowsPranzo = textPranzo.split('\n').map(row => row.split('\t'));
+            const rowsCena = textCena.split('\n').map(row => row.split('\t'));
+
+            generaMenuOspiti(rowsPranzo, rowsCena);
+        } catch (e) { 
+            console.error(e);
+            document.getElementById('menu-pasti-options').innerHTML = "<p style='color:var(--danger); text-align:center;'>Impossibile caricare il menù del giorno.</p>";
+        }
+    }
+
+    function estraiColonna(rows, colIndex) {
+        let elementi = [];
+        for (let i = 1; i < rows.length; i++) {
+            if (rows[i] && rows[i][colIndex]) {
+                let valore = rows[i][colIndex].trim();
+                if (valore !== '') {
+                    elementi.push(valore);
+                }
+            }
+        }
+        return elementi;
+    }
+
+    function generaMenuOspiti(rowsPranzo, rowsCena) {
+        const oraAttuale = new Date().getHours();
+
+        const pranzoScaduto = oraAttuale >= 10;
+        const cenaScaduta = oraAttuale >= 16;
+
+        let html = '';
+
+        html += `
+        <div class="meal-block ${pranzoScaduto ? 'disabled-meal' : ''}" data-meal="pranzo">
+            <div class="meal-header">
+                <span>Pranzo</span>
+                ${pranzoScaduto ? '<span class="expired-badge">Prenotazioni chiuse (dopo le 10:00)</span>' : ''}
+            </div>
+            ${costruisciSezioneServizio(rowsPranzo, 'pranzo', pranzoScaduto)}
+            <div class="field" style="margin-top: 1rem;">
+                <label for="note-pranzo">NOTE PRANZO</label>
+                <textarea id="note-pranzo" rows="2" placeholder="Note.." ${pranzoScaduto ? 'disabled' : ''}></textarea>
+            </div>
+        </div>`;
+
+        html += `
+        <div class="meal-block ${cenaScaduta ? 'disabled-meal' : ''}" data-meal="cena">
+            <div class="meal-header">
+                <span>Cena</span>
+                ${cenaScaduta ? '<span class="expired-badge">Prenotazioni chiuse (dopo le 16:00)</span>' : ''}
+            </div>
+            ${costruisciSezioneServizio(rowsCena, 'cena', cenaScaduta)}
+            <div class="field" style="margin-top: 1rem;">
+                <label for="note-cena">NOTE CENA</label>
+                <textarea id="note-cena" rows="2" placeholder="Note.." ${cenaScaduta ? 'disabled' : ''}></textarea>
+            </div>
+        </div>`;
+
+        document.getElementById('menu-pasti-options').innerHTML = html;
+    }
+
+    function costruisciSezioneServizio(rows, servizio, disabilitato) {
+        if (!rows || rows.length <= 1) {
+            return '<p style="font-size:0.8rem; color: var(--text-muted);">Menù non disponibile.</p>';
+        }
+
+        const portateInfo = [
+            { nome: "Primo Piatto", colAlt: 1, rowIndex: 1 },
+            { nome: "Secondo Piatto", colAlt: 2, rowIndex: 2 },
+            { nome: "Contorno", colAlt: 3, rowIndex: 3 }
+        ];
+
+        let out = '';
+
+        portateInfo.forEach(p => {
+            let piattoGiorno = (rows[p.rowIndex] && rows[p.rowIndex][0]) ? rows[p.rowIndex][0].trim() : "";
+            let alternative = estraiColonna(rows, p.colAlt);
+
+            out += `<div class="portata-group">`;
+
+            if (piattoGiorno) {
+                const googleSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(piattoGiorno)}`;
+                out += `
+                <label class="dish-option">
+                    <input type="checkbox" class="cb-giorno-${servizio}" data-portata="${p.nome}" value="${escapeHtml(piattoGiorno)}" onchange="gestisciSelezione('${servizio}', '${p.nome}', event)" ${disabilitato ? 'disabled' : ''}>
+                    <a href="${googleSearchUrl}" target="_blank" class="dish-link" title="Cerca su Google">
+                        <span>${escapeHtml(piattoGiorno)}</span>
+                        <span class="search-icon">🔍</span>
+                    </a>
+                </label>`;
+            }
+
+            if (alternative.length > 0) {
+                out += `<select class="select-alt-${servizio}" data-portata="${p.nome}" onchange="gestisciSelezione('${servizio}', '${p.nome}', event)" ${disabilitato ? 'disabled' : ''}>
+                    <option value="">-- Seleziona alternativa --</option>`;
+                alternative.forEach(opt => {
+                    out += `<option value="${escapeHtml(opt)}">${escapeHtml(opt)}</option>`;
+                });
+                out += `</select>`;
+            }
+
+            out += `</div>`;
+        });
+
+        return out;
+    }
+
+    function gestisciSelezione(servizio, portata, ev) {
+        const container = document.querySelector(`.meal-block[data-meal="${servizio}"]`);
+        if (!container) return;
+
+        const cb = container.querySelector(`input.cb-giorno-${servizio}[data-portata="${portata}"]`);
+        const sel = container.querySelector(`select.select-alt-${servizio}[data-portata="${portata}"]`);
+        const target = ev ? ev.target : null;
+
+        if (target && target.type === 'checkbox' && cb && cb.checked) {
+            if (sel) sel.value = "";
+        } else if (target && target.tagName === 'SELECT' && sel && sel.value !== "") {
+            if (cb) cb.checked = false;
+        }
+    }
+
+    function raccogliScelteServizio(servizio) {
+        const container = document.querySelector(`.meal-block[data-meal="${servizio}"]`);
+        if (!container || container.classList.contains('disabled-meal')) return { primo: "-", secondo: "-", contorno: "-" };
+
+        let res = { primo: "-", secondo: "-", contorno: "-" };
+        const portate = ["Primo Piatto", "Secondo Piatto", "Contorno"];
+        const chiavi = ["primo", "secondo", "contorno"];
+
+        portate.forEach((portata, index) => {
+            const cb = container.querySelector(`input.cb-giorno-${servizio}[data-portata="${portata}"]`);
+            const sel = container.querySelector(`select.select-alt-${servizio}[data-portata="${portata}"]`);
+
+            if (cb && cb.checked) {
+                res[chiavi[index]] = cb.value;
+            } else if (sel && sel.value) {
+                res[chiavi[index]] = sel.value;
+            }
+        });
+
+        return res;
+    }
+
+    async function inviaPrenotazione(e) {
+        e.preventDefault();
+
+        if (!datiOspiteCorrente || !codiceAccesso) {
+            mostraErroreAccesso("<b>Sessione non valida.</b><br>Assicurati di aver aperto la pagina tramite il tuo link personale.");
+            return;
+        }
+
+        const notePranzo = document.getElementById('note-pranzo') ? document.getElementById('note-pranzo').value.trim() : "";
+        const noteCena = document.getElementById('note-cena') ? document.getElementById('note-cena').value.trim() : "";
+
+        const pranzoScelte = raccogliScelteServizio('pranzo');
+        const cenaScelte = raccogliScelteServizio('cena');
+
+        const haSceltoPranzo = pranzoScelte.primo !== "-" || pranzoScelte.secondo !== "-" || pranzoScelte.contorno !== "-";
+        const haSceltoCena = cenaScelte.primo !== "-" || cenaScelte.secondo !== "-" || cenaScelte.contorno !== "-";
+
+        if (!haSceltoPranzo && !haSceltoCena) {
+            alert("Seleziona almeno una portata o un'alternativa per un servizio ancora aperto!");
+            return;
+        }
+
+        const payload = {
+            azione: "invia_prenotazione",
+            codice: codiceAccesso,
+            notePranzo: notePranzo,
+            noteCena: noteCena,
+            pranzo: pranzoScelte,
+            cena: cenaScelte
+        };
+
+        const ov = document.getElementById('overlay');
+        const spinner = document.getElementById('overlaySpinner');
+        spinner.style.display = 'block';
+        document.getElementById('overlayMsg').innerText = "Invio prenotazione in corso...";
+        ov.style.display = 'flex';
+
+        try {
+            const response = await fetch(URL_APPS_SCRIPT, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            });
+
+            const risultato = await response.json();
+            spinner.style.display = 'none';
+
+            if (risultato.result === "error") {
+                ov.style.display = 'none';
+                alert("Errore: " + (risultato.error || "Impossibile completare la prenotazione."));
+                return;
+            }
+
+            document.getElementById('overlayMsg').innerText = "Prenotazione Inviata con successo!";
+            setTimeout(() => { 
+                ov.style.display = 'none'; 
+                document.getElementById('formPasti').reset(); 
+                caricaMenu();
+            }, 2000);
+        } catch(err) {
+            console.error(err);
+            spinner.style.display = 'none';
+            ov.style.display = 'none';
+            alert("Errore durante l'invio della prenotazione.");
+        }
+    }
+
+    caricaDataESanti();
+    caricaMenu();
+    verificaCodiceAccesso();
+</script>
+</body>
+</html>
