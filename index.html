@@ -149,6 +149,24 @@
             margin-top: 2px;
         }
 
+        .btn-vedi-prenotazione {
+            margin-top: 10px;
+            padding: 6px 12px;
+            background: var(--accent-sage);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: none;
+            transition: opacity 0.2s;
+        }
+
+        .btn-vedi-prenotazione:hover {
+            opacity: 0.9;
+        }
+
         .error-box {
             background: var(--danger-bg);
             border: 1px solid #fca5a5;
@@ -272,6 +290,120 @@
             border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 12px; 
         }
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Stili Pop-up Riepilogo Prenotazioni */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(45, 55, 72, 0.65);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            padding: 1rem;
+        }
+
+        .modal-card {
+            background: #ffffff;
+            width: 100%;
+            max-width: 480px;
+            border-radius: var(--radius);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+            overflow: hidden;
+            animation: modalFadeIn 0.2s ease-out;
+        }
+
+        @keyframes modalFadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .modal-header {
+            padding: 1rem 1.25rem;
+            background: var(--accent-sage-light);
+            border-bottom: 1px solid #c8e1d5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-sage);
+        }
+
+        .modal-close-x {
+            background: none;
+            border: none;
+            font-size: 1.4rem;
+            line-height: 1;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .modal-body {
+            padding: 1.25rem;
+            max-height: 70vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .riepilogo-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 0.9rem;
+        }
+
+        .riepilogo-box h4 {
+            font-size: 0.85rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--primary);
+            margin-bottom: 0.5rem;
+            padding-bottom: 0.35rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .riepilogo-riga {
+            font-size: 0.85rem;
+            margin-bottom: 4px;
+            color: var(--text-main);
+        }
+
+        .riepilogo-riga span {
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+
+        .riepilogo-vuoto {
+            font-size: 0.83rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .modal-footer {
+            padding: 0.9rem 1.25rem;
+            border-top: 1px solid var(--border-color);
+            text-align: right;
+            background: #fcfbf9;
+        }
+
+        .modal-btn-chiudi {
+            padding: 0.55rem 1.2rem;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -298,6 +430,9 @@
                 <div id="ospite-info-box" class="ospite-box">
                     Benvenuto <b id="lbl-nome"></b> — Camera <b id="lbl-camera"></b>
                     <span id="lbl-email-riga" class="ospite-sub" style="display:none;">Email: <span id="lbl-email"></span></span>
+                    <button type="button" id="btn-vedi-prenotazione" class="btn-vedi-prenotazione" onclick="apriPopupPrenotazioni()">
+                        📋 Visualizza la tua prenotazione
+                    </button>
                 </div>
 
                 <!-- Sezioni Menù (Caricate dinamicamente) -->
@@ -308,6 +443,22 @@
                 <button type="submit" id="btn-invia" class="submit-btn" style="display:none;">Conferma e Invia Prenotazione</button>
             </div>
         </form>
+    </div>
+
+    <!-- Pop-up Riepilogo Prenotazioni Esistenti -->
+    <div id="popup-prenotazioni" class="modal-backdrop" onclick="chiudiPopupSeSfondo(event)">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3>Le tue prenotazioni registrate</h3>
+                <button type="button" class="modal-close-x" onclick="chiudiPopupPrenotazioni()">&times;</button>
+            </div>
+            <div class="modal-body" id="popup-prenotazioni-body">
+                <!-- Contenuto generato dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="modal-btn-chiudi" onclick="chiudiPopupPrenotazioni()">Chiudi</button>
+            </div>
+        </div>
     </div>
 
     <div id="overlay">
@@ -324,6 +475,7 @@
 
     let codiceAccesso = "";
     let datiOspiteCorrente = null;
+    let prenotazioniUtente = { pranzo: null, cena: null };
 
     function escapeHtml(unsafe) {
         return String(unsafe || '').replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
@@ -449,6 +601,85 @@
             console.error(err);
             ov.style.display = 'none';
             mostraErroreAccesso("Errore di connessione durante la verifica del link. Riprova tra qualche istante.");
+        }
+    }
+
+    // Verifica tramite HTTP GET se esistono prenotazioni per l'email dell'utente
+    async function verificaPrenotazioniEsistenti(apriAutomaticamente = true) {
+        if (!datiOspiteCorrente || !datiOspiteCorrente.email) return;
+
+        const emailUtente = String(datiOspiteCorrente.email).trim().toLowerCase();
+        if (!emailUtente) return;
+
+        try {
+            const urlGet = `${URL_APPS_SCRIPT}?t=${new Date().getTime()}`;
+            const response = await fetch(urlGet);
+            if (!response.ok) return;
+
+            const dati = await response.json();
+
+            const listaPranzo = Array.isArray(dati.pranzo) ? dati.pranzo : [];
+            const listaCena = Array.isArray(dati.cena) ? dati.cena : [];
+
+            // Filtra per email e prende l'ultima prenotazione registrata nel foglio
+            const matchPranzo = listaPranzo.filter(r => String(r.email || "").trim().toLowerCase() === emailUtente);
+            const matchCena = listaCena.filter(r => String(r.email || "").trim().toLowerCase() === emailUtente);
+
+            prenotazioniUtente.pranzo = matchPranzo.length > 0 ? matchPranzo[matchPranzo.length - 1] : null;
+            prenotazioniUtente.cena = matchCena.length > 0 ? matchCena[matchCena.length - 1] : null;
+
+            const btnVedi = document.getElementById('btn-vedi-prenotazione');
+
+            if (prenotazioniUtente.pranzo || prenotazioniUtente.cena) {
+                btnVedi.style.display = 'inline-block';
+                if (apriAutomaticamente) {
+                    apriPopupPrenotazioni();
+                }
+            } else {
+                btnVedi.style.display = 'none';
+            }
+        } catch (err) {
+            console.error("Errore durante il controllo prenotazioni via GET:", err);
+        }
+    }
+
+    function generaHtmlServizioPopup(titolo, record) {
+        if (!record) {
+            return `
+                <div class="riepilogo-box">
+                    <h4>${escapeHtml(titolo)}</h4>
+                    <p class="riepilogo-vuoto">Nessuna prenotazione registrata.</p>
+                </div>
+            `;
+        }
+
+        return `
+            <div class="riepilogo-box">
+                <h4>${escapeHtml(titolo)}</h4>
+                <div class="riepilogo-riga"><span>Primo:</span> ${escapeHtml(record.primo || "-")}</div>
+                <div class="riepilogo-riga"><span>Secondo:</span> ${escapeHtml(record.secondo || "-")}</div>
+                <div class="riepilogo-riga"><span>Contorno:</span> ${escapeHtml(record.contorno || "-")}</div>
+                <div class="riepilogo-riga"><span>Note:</span> ${escapeHtml(record.note || "-")}</div>
+            </div>
+        `;
+    }
+
+    function apriPopupPrenotazioni() {
+        const body = document.getElementById('popup-prenotazioni-body');
+        body.innerHTML =
+            generaHtmlServizioPopup("Pranzo", prenotazioniUtente.pranzo) +
+            generaHtmlServizioPopup("Cena", prenotazioniUtente.cena);
+
+        document.getElementById('popup-prenotazioni').style.display = 'flex';
+    }
+
+    function chiudiPopupPrenotazioni() {
+        document.getElementById('popup-prenotazioni').style.display = 'none';
+    }
+
+    function chiudiPopupSeSfondo(event) {
+        if (event.target.id === 'popup-prenotazioni') {
+            chiudiPopupPrenotazioni();
         }
     }
 
@@ -660,6 +891,7 @@
                 ov.style.display = 'none'; 
                 document.getElementById('formPasti').reset(); 
                 caricaMenu();
+                verificaPrenotazioniEsistenti(false);
             }, 2000);
         } catch(err) {
             console.error(err);
@@ -676,6 +908,7 @@
         verificaCodiceAccesso().then(() => {
             if (datiOspiteCorrente) {
                 caricaMenu();
+                verificaPrenotazioniEsistenti(true);
             }
         });
     });
